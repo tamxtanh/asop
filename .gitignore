@@ -1,1 +1,26 @@
-/.env
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables (bảo mật tuyệt đối các API Keys)
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

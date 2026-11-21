@@ -13,6 +13,7 @@ export interface DebounceJobData {
   pageId: string;
   psid: string;
   customerName?: string;
+  gender?: string;
   extended?: boolean;
 }
 

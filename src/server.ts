@@ -89,16 +89,18 @@ function parsePancakeWebhook(body: any) {
     .map((a) => a.url || a.file_url)
     .filter(Boolean);
 
-  // Tên khách hàng
+  // Tên khách hàng & Giới tính
   const customerName =
     body?.customer_name ||
     body?.customer?.name ||
     (typeof msg === 'object' && senderId !== pageId ? msg?.from?.name : undefined) ||
     undefined;
 
+  const gender = String(body?.gender || '').replace(/[{}]/g, '').trim() || undefined;
+
   const isOutgoingFromPage = Boolean(pageId && senderId && senderId === pageId);
 
-  return { pageId, psid, messageId, rawText, imageUrls, customerName, isOutgoingFromPage };
+  return { pageId, psid, messageId, rawText, imageUrls, customerName, gender, isOutgoingFromPage };
 }
 
 app.get('/health', async () => ({ ok: true, status: 'healthy', timestamp: new Date().toISOString() }));
@@ -121,7 +123,7 @@ app.post('/webhook/pancake', async (req, reply) => {
     if (!dedup) return reply.code(200).send({ ignored: 'duplicate' });
   }
 
-  const { pageId, psid, messageId, rawText, imageUrls, customerName, isOutgoingFromPage } = parsed;
+  const { pageId, psid, messageId, rawText, imageUrls, customerName, gender, isOutgoingFromPage } = parsed;
   const baseKey = `chat:${pageId}:${psid}`;
   const lastJobKey = `${baseKey}:last_job_id`;
 
@@ -203,7 +205,7 @@ app.post('/webhook/pancake', async (req, reply) => {
 
   await debounceQueue.add(
     'flush',
-    { pageId, psid, customerName, extended: false },
+    { pageId, psid, customerName, gender, extended: false },
     { jobId: newJobId, delay }
   );
 

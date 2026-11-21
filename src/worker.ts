@@ -29,7 +29,7 @@ export function startDebounceWorker() {
   const worker = new Worker<DebounceJobData>(
     DEBOUNCE_QUEUE_NAME,
     async (job) => {
-      const { pageId, psid, customerName, extended } = job.data;
+      const { pageId, psid, customerName, gender, extended } = job.data;
       const baseKey = `chat:${pageId}:${psid}`;
       const bufKey = `${baseKey}:buf`;
       const verKey = `${baseKey}:ver`;
@@ -130,6 +130,8 @@ export function startDebounceWorker() {
         query: combinedText,
         conversationId: conv?.dify_conversation_id,
         imageUrls: images,
+        customerName: customerName || conv?.customer_name,
+        gender,
       });
 
       // Lưu/cập nhật conversation_id của Dify ngay lập tức

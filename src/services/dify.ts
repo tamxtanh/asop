@@ -11,6 +11,8 @@ export async function callDifyChat(params: {
   query: string;
   conversationId?: string | null;
   imageUrls?: string[];
+  customerName?: string;
+  gender?: string;
 }): Promise<DifyResponse> {
   const files = (params.imageUrls || []).slice(0, 4).map((url) => ({
     type: 'image',
@@ -18,9 +20,19 @@ export async function callDifyChat(params: {
     url,
   }));
 
+  // Xử lý xưng hô theo giới tính (MALE -> anh, FEMALE -> chị)
+  const xungho = params.gender?.toUpperCase().includes('FEMALE')
+    ? 'chị'
+    : params.gender?.toUpperCase().includes('MALE')
+    ? 'anh'
+    : 'anh/chị';
+
   const body = {
     inputs: {
       query: params.query || '',
+      customer_name: params.customerName || '',
+      gender: params.gender || '',
+      xungho,
     },
     query: params.query || 'Khách hàng vừa gửi hình ảnh, hãy xem ảnh và tư vấn phù hợp.',
     response_mode: 'blocking',
