@@ -1,6 +1,8 @@
 import Fastify from 'fastify';
 import { config } from './config';
 import { debounceQueue, redis, supabase } from './clients';
+import { getRuntimeConfig, setRuntimeConfig } from './runtimeConfig';
+import { renderAdminDashboard } from './adminHtml';
 import { isAiSentMessage } from './services/pancake';
 import { startTelegramPolling } from './services/telegram';
 import { BufferedMessage, startDebounceWorker } from './worker';
@@ -106,6 +108,47 @@ function parsePancakeWebhook(body: any) {
 
 app.get('/health', async () => ({ ok: true, status: 'healthy', timestamp: new Date().toISOString() }));
 
+// Giao diện Bảng Điều Khiển Cấu Hình Admin
+app.get('/admin', async (req, reply) => {
+  reply.type('text/html').send(renderAdminDashboard());
+});
+
+app.get('/api/config', async () => {
+  return await getRuntimeConfig();
+});
+
+app.post('/api/config', async (req) => {
+  const body = req.body as any;
+  const updated = await setRuntimeConfig(body || {});
+  return { ok: true, config: updated };
+});
+
+app.get('/api/conversations', async () => {
+  const { data } = await supabase
+    .from('conversations')
+    .select('*')
+    .order('updated_at', { ascending: false })
+    .limit(20);
+  return data || [];
+});
+
+app.post('/api/conversations/toggle-ai', async (req, reply) => {
+  const { pageId, psid, enable } = req.body as { pageId: string; psid: string; enable: boolean };
+  if (!pageId || !psid) return reply.code(400).send({ error: 'missing_params' });
+
+  await supabase
+    .from('conversations')
+    .update({
+      ai_enabled: Boolean(enable),
+      handover_reason: enable ? 'manual_admin_enabled' : 'manual_admin_disabled',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('page_id', pageId)
+    .eq('psid', psid);
+
+  return { ok: true, pageId, psid, ai_enabled: Boolean(enable) };
+});
+
 app.post('/webhook/pancake', async (req, reply) => {
   const body = req.body as any;
 
@@ -201,10 +244,11 @@ app.post('/webhook/pancake', async (req, reply) => {
     }
   }
 
-  // Tính thời gian chờ còn lại theo trần max_wait (35s)
+  // Tính thời gian chờ còn lại theo runtime config (có thể chỉnh qua Dashboard /admin)
+  const runtimeCfg = await getRuntimeConfig();
   const firstTs = Number((await redis.get(`${baseKey}:first_ts`)) || Date.now());
-  const remainingMax = Math.max(0, config.debounceMaxWaitMs - (Date.now() - firstTs));
-  const delay = Math.min(config.debounceBaseMs, remainingMax);
+  const remainingMax = Math.max(0, runtimeCfg.debounceMaxWaitMs - (Date.now() - firstTs));
+  const delay = Math.min(runtimeCfg.debounceBaseMs, remainingMax);
 
   const newJobId = `debounce-${pageId}-${psid}-v${version}`;
   await redis.set(lastJobKey, newJobId, 'EX', 120);

@@ -7,6 +7,7 @@ import {
   redis,
   supabase,
 } from './clients';
+import { getRuntimeConfig } from './runtimeConfig';
 import { callDifyChat } from './services/dify';
 import { sendPancakeImageBySku, sendPancakeText } from './services/pancake';
 import { notifySalesPhoneLead } from './services/telegram';
@@ -62,13 +63,15 @@ export function startDebounceWorker() {
       const firstTs = Number((await redis.get(firstTsKey)) || Date.now());
       const waitedMs = Date.now() - firstTs;
 
-      if (!extended && waitedMs < config.debounceMaxWaitMs && isLikelyIncomplete(texts, images)) {
+      const runtimeCfg = await getRuntimeConfig();
+
+      if (!extended && waitedMs < runtimeCfg.debounceMaxWaitMs && isLikelyIncomplete(texts, images)) {
         const extJobId = `debounce-${pageId}-${psid}-ext-${currentVer}`;
         await redis.set(`${baseKey}:last_job_id`, extJobId, 'EX', 120);
         await debounceQueue.add(
           'flush',
           { pageId, psid, customerName, extended: true },
-          { jobId: extJobId, delay: config.debounceExtendMs }
+          { jobId: extJobId, delay: runtimeCfg.debounceExtendMs }
         );
         return;
       }
@@ -109,7 +112,7 @@ export function startDebounceWorker() {
         await sendPancakeText(
           pageId,
           psid,
-          `Em nhận được số ${phone} của mình rồi ạ. Em chuyển thông tin sang bạn kỹ thuật gọi trao đổi chi tiết cho anh/chị trong ít phút nữa nhé.`
+          `Em đã nhận được SĐT ${phone}. Bên mình đợi giúp em chút nhé, bạn kỹ thuật sẽ liên hệ lại ngay ạ.`
         );
 
         const isReorder = conv?.handover_reason === 'sale_re-enabled' || Boolean(conv?.phone_number);
@@ -182,8 +185,11 @@ export function startDebounceWorker() {
           const prev = bubbles[i - 1];
           const delayMs =
             prev.type === 'text'
-              ? Math.min(Math.max(prev.content.length * 25, 1000), 2500)
-              : 1500;
+              ? Math.min(
+                  Math.max(prev.content.length * runtimeCfg.charDelayMs, runtimeCfg.minBubbleDelayMs),
+                  runtimeCfg.maxBubbleDelayMs
+                )
+              : 1000;
           await sleep(delayMs);
         }
 
