@@ -7,7 +7,9 @@ export const redis = new Redis(config.redisUrl, {
   maxRetriesPerRequest: null,
 });
 
-export const supabase = createClient(config.supabaseUrl, config.supabaseKey);
+export const supabase = createClient(config.supabaseUrl, config.supabaseKey, {
+  auth: { persistSession: false },
+});
 
 export interface DebounceJobData {
   pageId: string;
