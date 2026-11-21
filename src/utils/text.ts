@@ -1,4 +1,4 @@
-const VN_PHONE_REGEX = /(?<!\d)(?:\+?84|0)(?:3|5|7|8|9)(?:[\s.\-]*\d){8}(?!\d)/g;
+const VN_PHONE_REGEX = /(?<!\d)(?:\+?84|0)(?:3|5|7|8|9)(?:[\s.\-]*\d){7,9}(?!\d)/g;
 
 export function extractPhoneNumber(text: string): string | null {
   const matches = text.match(VN_PHONE_REGEX);
