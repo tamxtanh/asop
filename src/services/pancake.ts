@@ -105,16 +105,41 @@ export async function sendPancakeImageBySku(pageId: string, psid: string, sku: s
   const token = await getPageAccessToken(pageId);
   const conversationId = `${pageId}_${psid}`;
 
-  // Bước 1: Upload URL ảnh lên Pancake để lấy content_id
-  const uploadUrl = `https://pages.fm/api/public_api/v1/pages/${pageId}/upload_contents?access_token=${token}`;
-  const uploadRes = await fetch(uploadUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: product.image_url }),
-  });
+  // Kiểm tra cache content_id trong Redis trước (TTL 24h) để tránh upload lại nhiều lần
+  const cacheKey = `pancake:content_id:${pageId}:${sku}`;
+  let contentId = await redis.get(cacheKey);
 
-  const uploadData = (await uploadRes.json()) as { id?: string; content_id?: string };
-  const contentId = uploadData.content_id || uploadData.id;
+  if (!contentId) {
+    try {
+      // 1. Tải binary ảnh từ Supabase Storage
+      const imgRes = await fetch(product.image_url);
+      if (!imgRes.ok) throw new Error(`Fetch image failed: ${imgRes.status}`);
+      const arrayBuffer = await imgRes.arrayBuffer();
+
+      // 2. Upload dạng multipart/form-data lên Pancake API
+      const formData = new FormData();
+      formData.append(
+        'file',
+        new Blob([arrayBuffer], { type: 'image/png' }),
+        `${sku}.png`
+      );
+
+      const uploadUrl = `https://pages.fm/api/public_api/v1/pages/${pageId}/upload_contents?access_token=${token}`;
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const uploadData = (await uploadRes.json()) as { id?: string; content_id?: string; success?: boolean };
+      contentId = uploadData.content_id || uploadData.id || null;
+
+      if (contentId) {
+        await redis.set(cacheKey, contentId, 'EX', 86400);
+      }
+    } catch (err) {
+      console.error(`[Upload Image Failed] sku=${sku}`, err);
+    }
+  }
 
   const msgUrl = `https://pages.fm/api/public_api/v1/pages/${pageId}/conversations/${conversationId}/messages?access_token=${token}`;
 
