@@ -1,0 +1,23 @@
+{
+  "name": "asop-ai-middleware",
+  "version": "1.0.0",
+  "description": "Middleware bridge for Pancake Webhook, BullMQ, Redis, Supabase, Dify, and Telegram",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "bullmq": "^5.41.0",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.1",
+    "ioredis": "^5.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}
