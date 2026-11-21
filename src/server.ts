@@ -113,8 +113,13 @@ app.post('/webhook/pancake', async (req, reply) => {
 
   // Trả 200 OK ngay lập tức (<50ms) để Pancake không timeout/retry
   const parsed = parsePancakeWebhook(body);
-  if (!parsed.pageId || !parsed.psid) {
-    return reply.code(200).send({ ignored: 'missing_ids' });
+  if (
+    !parsed.pageId ||
+    !parsed.psid ||
+    parsed.pageId.includes('{{') ||
+    parsed.psid.includes('{{')
+  ) {
+    return reply.code(200).send({ ok: true, ignored: 'mock_test_request' });
   }
 
   // 1. Chống trùng Webhook bằng messageId (TTL 24h)
