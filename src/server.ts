@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import { config } from './config';
 import { debounceQueue, redis, supabase } from './clients';
 import { isAiSentMessage } from './services/pancake';
+import { startTelegramPolling } from './services/telegram';
 import { BufferedMessage, startDebounceWorker } from './worker';
 
 const app = Fastify({ logger: true });
@@ -219,6 +220,7 @@ app.post('/webhook/pancake', async (req, reply) => {
 
 async function bootstrap() {
   startDebounceWorker();
+  startTelegramPolling();
   await app.listen({ port: config.port, host: '0.0.0.0' });
 }
 

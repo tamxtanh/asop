@@ -112,6 +112,7 @@ export function startDebounceWorker() {
           `Em nhận được số ${phone} của mình rồi ạ. Em chuyển thông tin sang bạn kỹ thuật gọi trao đổi chi tiết cho anh/chị trong ít phút nữa nhé.`
         );
 
+        const isReorder = conv?.handover_reason === 'sale_re-enabled' || Boolean(conv?.phone_number);
         await notifySalesPhoneLead({
           pageId,
           psid,
@@ -119,6 +120,7 @@ export function startDebounceWorker() {
           phone,
           latestText: combinedText,
           summary,
+          isReorder,
         });
         return;
       }
@@ -206,12 +208,14 @@ export function startDebounceWorker() {
           .eq('page_id', pageId)
           .eq('psid', psid);
 
+        const isReorder = conv?.handover_reason === 'sale_re-enabled' || Boolean(conv?.phone_number);
         await notifySalesPhoneLead({
           pageId,
           psid,
           customerName: customerName || conv?.customer_name,
           phone: aiPhone,
           latestText: combinedText,
+          isReorder,
         });
       }
     },
